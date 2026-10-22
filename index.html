@@ -312,6 +312,25 @@ footer{border-top:1px solid var(--line);padding-block:20px 90px;font-size:12.5px
 .tiercard td:first-child{padding-left:12px}
 .show-s{display:none}
 @media (max-width:820px){.show-s{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}}
+
+.photos{margin:0 0 14px}
+.ph-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.ph-head b{font-size:13px}
+.ph-head span{font-size:11.5px;color:var(--muted)}
+.ph-row{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:thin}
+.ph{flex:0 0 72%;max-width:260px;scroll-snap-align:start;text-align:left;display:flex;flex-direction:column;gap:4px;font-size:12px;line-height:1.4;color:var(--ink)}
+.ph:only-child{flex-basis:100%;max-width:none}
+.ph img{width:100%;aspect-ratio:16/8;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--sunk)}
+.ph:hover img{border-color:var(--ink)}
+.poles{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}
+.pole{display:grid;grid-template-columns:110px 1fr;gap:10px;align-items:center;background:var(--paper);border-radius:6px;padding:8px 10px;border-left:4px solid var(--pc)}
+.pole svg{width:100%;height:auto}
+.pole b{display:block;font-size:13.5px}
+.pole b em{font-style:normal;color:var(--muted);font-weight:500}
+.pole .pt{display:inline-block;font-size:11px;font-weight:600;color:var(--paper);background:var(--pc);border-radius:3px;padding:0 6px;margin:2px 0}
+.pole small{display:block;font-size:12px;color:var(--muted);line-height:1.45}
+#poleCards .poles{margin:4px 0 12px}
+.dbody img{max-height:78vh;object-fit:contain;background:#111}
 .mbar{display:none}
 
 @media (max-width:1180px){
@@ -410,7 +429,7 @@ footer{border-top:1px solid var(--line);padding-block:20px 90px;font-size:12.5px
             <button class="chip" id="tDetail" aria-pressed="true">확대컷</button>
             <button class="chip" id="tNums" aria-pressed="false">팩 번호</button>
             <button class="chip" id="tXray" aria-pressed="false">본체 투시</button>
-            <button class="chip" id="tColors" aria-pressed="false">프레임 색</button>
+            <button class="chip" id="tColors" aria-pressed="true">프레임 색</button>
             <button class="chip" id="tRopes" aria-pressed="true">로프</button>
             <button class="chip" id="tInner" aria-pressed="true">이너</button>
             <button class="chip" id="tRoof" aria-pressed="true">쉴드루프</button>
@@ -461,6 +480,7 @@ footer{border-top:1px solid var(--line);padding-block:20px 90px;font-size:12.5px
     <div class="grid struct">
       <div class="card"><h3>위에서 본 배치 · 팩 27곳</h3><p class="sub" id="planSub"></p><div class="svgbox" id="plan"></div><div class="keys" id="planKeys"></div></div>
       <div class="card"><h3>프레임 색 규칙</h3><p class="sub">프레임 끝의 표시 색 = 슬리브 테이프 색 = 링핀 끈 색</p>
+        <div id="poleCards"></div>
         <div class="colors">
           <div class="crow"><b><i style="background:var(--navy)"></i>곤색</b><p>A프레임 × 2 · 릿지폴 × 1<small>릿지폴은 정중앙 곤색 슬리브, A프레임 끝은 곤색 끈 링핀 4곳. 조인트의 곤색 씰은 바깥쪽.</small></p></div>
           <div class="crow"><b><i style="background:var(--pblack)"></i>검정</b><p>C프레임 × 2<small>검정 테이프 슬리브에 통과, A프레임의 바깥쪽에서 X자로 교차. 검정 끈 링핀 4곳.</small></p></div>
@@ -1637,13 +1657,13 @@ const LL = (() => {
   function frame(kind, side, t) {
     const th = Math.PI * t, s = Math.sin(th), c = Math.cos(th);
     let x, r = PR, top = 2.06;
-    if (kind === 'a') x = side * (1.25 + 1.0 * s);
-    else if (kind === 'c') { x = side * (2.85 - 1.35 * s); r = PR * 1.015; top = 2.08; }
+    if (kind === 'a') x = side * (2.3 - 0.3 * s);   // A: feet near the ends, top at the ridge end (photo: 우리의캠핑 26·32)
+    else if (kind === 'c') { x = side * (1.2 + 1.25 * s); r = PR * 1.015; top = 2.08; }   // C: feet inside, top bowed out over A
     else { x = 0; top = 2.1; }
     return [x, top * Math.pow(Math.max(0, s), EXP), -r * c];
   }
-  // A/C cross where 1.25 + s = 2.85 − 1.35 s
-  const sX = 1.6 / 2.35;
+  // A/C cross where 2.3 − 0.3 s = 1.2 + 1.25 s
+  const sX = 1.1 / 1.55;
   const crossT = Math.asin(sX) / Math.PI;
   const crossings = [];
   for (const side of [-1, 1]) for (const t of [crossT, 1 - crossT]) crossings.push(frame('a', side, t));
@@ -1654,10 +1674,10 @@ const LL = (() => {
   const LR = sz => sz < 0 ? '왼쪽' : '오른쪽';
   const add = (o) => { o.no = pegs.length + 1; pegs.push(o); };
   // 1–4: A-frame feet in an X (스노우피크 공식 영상): one foot → opposite foot in a straight line → lengthwise 90° → last one pulled diagonally
-  for (const [x, sz, how] of [[-1.25, -1, '첫 팩'], [-1.25, 1, '맞은편을 일직선으로 당겨서'], [1.25, 1, '길이 방향(90°)으로 당겨서'], [1.25, -1, '대각선으로 당겨서']])
+  for (const [x, sz, how] of [[-2.3, -1, '첫 팩'], [-2.3, 1, '맞은편을 일직선으로 당겨서'], [2.3, 1, '길이 방향(90°)으로 당겨서'], [2.3, -1, '대각선으로 당겨서']])
     add({ kind: 'body', part: 'a', name: `${x < 0 ? '거실' : '침실'}쪽 A프레임 ${LR(sz)} 발`, what: `곤색 끈 링핀 루프 · ${how}`, at: [x, 0, sz * PR], peg: [x * 0.98, sz * 1.9], key: true });
   // 5–8 C feet, 9–10 centre, 11–14 door corners
-  for (const [x, sz] of [[-2.85, -1], [-2.85, 1], [2.85, 1], [2.85, -1]])
+  for (const [x, sz] of [[-1.2, -1], [-1.2, 1], [1.2, 1], [1.2, -1]])
     add({ kind: 'body', part: 'c', name: `${x < 0 ? '거실' : '침실'}쪽 C프레임 ${LR(sz)} 발`, what: '검정 끈 링핀 루프', at: [x, 0, sz * PR], peg: [x * 0.98, sz * 1.9] });
   for (const sz of [-1, 1]) add({ kind: 'body', part: 'center', name: `센터프레임 ${LR(sz)} 발`, what: '빨강 끈 링핀 루프', at: [0, 0, sz * PR], peg: [0, sz * 1.9] });
   for (const [sx, sz] of [[-1, -1], [-1, 1], [1, 1], [1, -1]])
@@ -1666,9 +1686,9 @@ const LL = (() => {
   const cx = crossT;
   const ropes = [
     [3.5, '거실쪽 끝 모서리', sz => shell(0.13, sz < 0 ? 0.3 : 0.7), sz => [-4.2, sz * 2.8]],
-    [2.5, '거실쪽 교차부(A×C)', sz => frame('a', -1, sz < 0 ? cx : 1 - cx), sz => [-2.25, sz * 3.2]],
+    [2.5, '거실쪽 교차부(A×C)', sz => frame('a', -1, sz < 0 ? cx : 1 - cx), sz => [-2.4, sz * 3.2]],
     [3.5, '센터프레임 중간', sz => frame('center', 1, sz < 0 ? 0.3 : 0.7), sz => [0, sz * 3.85]],
-    [3.5, '침실쪽 교차부(A×C)', sz => frame('a', 1, sz < 0 ? cx : 1 - cx), sz => [2.25, sz * 3.9]],
+    [3.5, '침실쪽 교차부(A×C)', sz => frame('a', 1, sz < 0 ? cx : 1 - cx), sz => [2.4, sz * 3.9]],
     [1.5, '침실쪽 C프레임 아래', sz => frame('c', 1, sz < 0 ? 0.1 : 0.9), sz => [2.9, sz * 3.05]],
     [2.5, '침실쪽 끝 모서리', sz => shell(0.87, sz < 0 ? 0.3 : 0.7), sz => [4.0, sz * 2.15]]
   ];
@@ -1706,7 +1726,7 @@ const STEPS = [
   warn: '강풍이나 악천후가 예상되면 설영을 미루고 안전한 곳으로 이동하세요.',
   dWarn: '로프 4개는 데크 밖 파쇄석(자갈)으로 떨어집니다. 파쇄석에는 두랄루민 팩보다 단조팩과 망치가 필요합니다.', src: '설명서 p.1, p.3' },
 
-{ t: '본체 펼치기 · 빌딩테이프', short: '본체 펼치기', code: 'SPREAD', page: 4, fig: 'tape',
+{ t: '본체 펼치기 · 빌딩테이프', short: '본체 펼치기', code: 'SPREAD', page: 4, fig: 'tape', fig2: 'poles',
   lead: '본체를 펴고 바닥의 테이프 3개를 확인합니다.',
   body: '빌딩테이프는 본체 바닥을 가로지르는 띠로, 프레임을 세울 때 본체 폭을 잡아 줍니다. 양 끝 Y자형 2개와 가운데 I자형 1개입니다.',
   acts: [['본체를 펼치고 양 끝 도어패널(출입구)을 정한 방향에 맞춥니다. 측면은 아래에 지퍼가 있는 쪽이 사이드 도어(거실), 없는 쪽이 창문(침실)입니다(모던캠핑). 원단은 발로 밟지 않습니다.', 'spread'], ['바람이 조금이라도 있으면 아무 곳이나 두 곳만 먼저 임시로 팩다운해 날아가지 않게 합니다(스노우피크 공식 영상).', 'pegloop'], ['빌딩테이프 3개의 버클이 모두 연결됐는지 봅니다. 빠진 버클은 지금 "딸깍" 소리가 나게 연결합니다.', 'buckle'], ['프레임 가방에서 같은 모양끼리 모읍니다. 곤색 3개(A×2, 릿지폴×1), 검정 2개, 빨강 1개.', 'sort']],
@@ -1717,15 +1737,15 @@ const STEPS = [
 { t: '릿지폴과 A프레임 연결', short: '릿지 + A 연결', code: 'NAVY', color: 'navy', page: 4,
   lead: '지붕의 등뼈를 먼저 만듭니다.',
   body: '곤색 표시가 있는 A프레임 릿지폴을 본체 정중앙의 곤색 슬리브에 넣고, 양 끝을 A프레임 조인트에 끼웁니다. 영상에서 가장 많이 틀린다고 짚는 단계입니다.',
-  acts: [['A프레임 릿지폴을 마디마다 끝까지 연결한 뒤 곤색 슬리브에 밀어 넣습니다.', 'sleeve'], ['A프레임은 좌우 마디를 분리한 상태로 준비합니다. 다 이어 놓고 끼우지 마세요(설명서 그림 B).', 'split'], ['도어 쪽 바깥에 서서, A프레임 조인트의 곤색 스티커(씰)가 나를 향하고 ㅅ자로 하늘을 향하게 해서 릿지폴 끝을 끝까지 끼웁니다. 180° 뒤집혀 V자가 되면 안 됩니다.', 'joint'], ['센터링을 안쪽 끝까지 걸고 조정 벨트를 당깁니다.', 'centering'], ['반대쪽 A프레임도 같은 방법으로 끼웁니다. 끼우기 어려우면 A프레임 한 마디를 잠깐 빼고 꽂으면 쉽습니다.', 'joint']],
+  acts: [['A프레임 릿지폴을 마디마다 끝까지 연결한 뒤 곤색 슬리브에 밀어 넣습니다.', 'sleeve'], ['A프레임은 좌우 마디를 분리한 상태로 준비합니다. 다 이어 놓고 끼우지 마세요(설명서 그림 B).', 'split'], ['A프레임 조인트를 바닥에 놓고 봤을 때 꺾인 모양이 ㅅ자(가운데가 위로 솟고 양쪽이 아래로)가 되게 릿지폴 끝을 끝까지 끼웁니다. 뒤집혀 V자가 되면 잘못입니다(현장 사진 3번). 곤색 스티커는 바깥쪽을 향합니다. 영상마다 "몸쪽", "아래로"라고 다르게 말하니 사진의 올바른 모양과 비교하세요.', 'joint'], ['센터링을 안쪽 끝까지 걸고 조정 벨트를 당깁니다.', 'centering'], ['반대쪽 A프레임도 같은 방법으로 끼웁니다. 끼우기 어려우면 A프레임 한 마디를 잠깐 빼고 꽂으면 쉽습니다.', 'joint']],
   tip: '영상마다 "스티커가 몸쪽으로", "스티커가 아래로"라고 다르게 말하지만 같은 방향입니다. 바르게 꽂으면 A프레임이 살짝 들려 ㅅ자가 되고, 위에서 보면 릿지폴과 함께 H자 모양입니다. A프레임을 다 연결하면 바닥에 놓았을 때 프레임이 살짝 떠 있어야 정상입니다(공식 영상). 키가 작다면 상부 버클까지 체결해 두면 편합니다(모던캠핑).',
-  chk: ['스티커가 바깥(나)을 향함 · ㅅ자', '릿지폴 양 끝 체결', '센터링 걸기'],
+  chk: ['조인트 ㅅ자 (V자 아님)', '릿지폴 양 끝 체결', '센터링 걸기'],
   warn: '조인트 방향이 틀리면 릿지폴이 꺾일 수 있습니다. 비틀어서 맞추지 마세요.', src: '설명서 p.3 ② · 공식 영상 2:12 · 모던캠핑 3:50 · 우리의캠핑 2:06' },
 
 { t: 'A프레임 세우기', short: 'A프레임 세우기', code: 'NAVY', color: 'navy', page: 5,
   lead: '두 사람이 반대편을 살피며 함께 세웁니다.',
   body: 'A프레임 마디를 모두 연결해 세우고, 본체 바닥의 곤색 끈 링핀을 A프레임 끝 4곳에 끼웁니다.',
-  acts: [['한 사람이 릿지폴 쪽 가운데를 살짝 들어 원단 무게를 받쳐 주면 훨씬 쉽게 섭니다(우리의캠핑).', 'lift'], ['분리해 둔 A프레임 마디를 끝까지 연결합니다.', 'connect'], ['링핀 끈이 꼬이지 않았는지 보고, 곤색 끈 링핀을 A프레임 끝에 끼웁니다(4곳). 프레임을 지면에서 많이 들지 말고, 하늘 쪽으로 약간만 들며 꽂습니다.', 'ringpin'], ['A프레임 위쪽 플라스틱 후크를 양쪽 모두 걸어 둡니다. 갑작스런 돌풍에 대비하는 단계입니다(공식 영상). 바람이 불면 A프레임을 세우자마자 A 발부터 바로 팩을 박습니다(모던캠핑).', 'hook']],
+  acts: [['한 사람이 릿지폴 쪽 가운데를 살짝 들어 원단 무게를 받쳐 주면 훨씬 쉽게 섭니다(우리의캠핑).', 'lift'], ['분리해 둔 A프레임 마디를 끝까지 연결합니다. A프레임 발은 텐트 양 끝 "제일 바깥쪽" 링핀 자리입니다(사진 참고).', 'connect'], ['링핀 끈이 꼬이지 않았는지 보고, 곤색 끈 링핀을 A프레임 끝에 끼웁니다(4곳). 프레임을 지면에서 많이 들지 말고, 하늘 쪽으로 약간만 들며 꽂습니다.', 'ringpin'], ['A프레임 위쪽 플라스틱 후크를 양쪽 모두 걸어 둡니다. 갑작스런 돌풍에 대비하는 단계입니다(공식 영상). 바람이 불면 A프레임을 세우자마자 A 발부터 바로 팩을 박습니다(모던캠핑).', 'hook']],
   dActs: [['데크 표면에서는 프레임 끝이 미끄러집니다. 링핀을 끼우는 동안 다른 사람이 프레임 끝을 손으로 잡아 줍니다.', 'ringpin']],
   chk: ['곤색 링핀 4곳 · 꼬임 없음', 'A 상부 후크 양쪽'],
   warn: '링핀을 끼울 때 프레임 끝을 크게 들어 올리면 반대쪽 조인트와 릿지폴 끝에 무리한 힘이 걸려 꺾일 수 있습니다.', src: '설명서 p.4 ③ · 공식 영상 3:54–4:30 · 모던캠핑 5:30' },
@@ -1740,7 +1760,7 @@ const STEPS = [
 { t: '센터프레임 세우기', short: '센터프레임', code: 'RED', color: 'red', page: 5,
   lead: '가운데 아치로 공간을 완성합니다.',
   body: '양 끝에 적색 표시가 있는 센터프레임(관 자체에는 색이 없음)을 연결하면서 본체 가운데의 빨간 테이프 슬리브에 밀어 넣습니다.',
-  acts: [['사이드 도어 패널을 열고 본체 안쪽에서 작업하면 편합니다.', 'door'], ['마디를 끝까지 연결하며 빨간 센터 슬리브에 통과시킵니다.', 'sleeve'], ['빨간 끈 링핀을 센터프레임 양 끝에 끼웁니다.', 'ringpin']],
+  acts: [['사이드 도어 패널을 열고 본체 안쪽에서 작업하면 편합니다.', 'door'], ['마디를 끝까지 연결하며 빨간 센터 슬리브에 통과시킵니다. 힘으로 밀지 말고 자연스럽게 반대쪽으로 넣고, 살짝 걸리는 곳은 원단을 위로 들어 풀어 줍니다.', 'sleeve'], ['빨간 끈 링핀을 센터프레임 양 끝에 끼웁니다.', 'ringpin']],
   tip: '센터프레임 링핀이 가장 빡빡합니다. 프레임을 슬리브 쪽으로 최대한 밀어 넣고, 프레임 끝을 발로 받친 채 장갑 낀 손으로 링핀을 잡고 한 번에 꽂습니다(모던캠핑).',
   chk: ['빨강 슬리브 통과', '빨강 링핀 2곳'],
   warn: '프레임 끝이 튀어 오르지 않게 꼭 잡고 끼웁니다. 주변에 아이가 없는지 확인하세요.', src: '설명서 p.4 ⑤' },
@@ -1798,7 +1818,7 @@ const STEPS = [
 { t: '쉴드루프 덮기', short: '쉴드루프', code: 'ROOF', page: 11,
   lead: '두 사람이 양쪽에서 세팅 코드를 잡고 넘깁니다.',
   body: '아이보리 모델에는 쉴드루프가 기본 포함입니다. 한쪽 측면에 먼저 건 다음, 세팅 코드로 본체 위를 넘겨 반대쪽에 겁니다.',
-  acts: [['쉴드루프 뒷면이 위로 오게 펼치고, 후크 부착 세팅 코드 위치를 확인합니다.', 'roofspread'], ['본체 한쪽 측면의 C·A·센터프레임 상부 후크 테이프 접속부에 쉴드루프 접속 후크를 겁니다.', 'roofhook'], ['두 사람이 세팅 코드를 하나씩 잡고, 쉴드루프를 본체 위로 넘겨 덮습니다. 바람이 약하게 불면, 먼저 거는 쪽을 바람이 불어오는 쪽으로 하면 바람이 루프를 반대쪽으로 넘겨 줍니다(모던캠핑).', 'roofthrow'], ['반대쪽 C·A·센터프레임 상부 후크 테이프 접속부에 접속 후크를 모두 겁니다.', 'roofhook'], ['다 걸었으면 세팅 코드를 분리합니다.', 'roofcord']],
+  acts: [['쉴드루프 뒷면이 위로 오게 펼치고, 오목하게 들어간 끝부분과 후크 부착 세팅 코드 위치를 먼저 찾습니다.', 'roofspread'], ['본체 한쪽 측면의 C·A·센터프레임 상부 후크 테이프 접속부에 쉴드루프 접속 후크를 겁니다.', 'roofhook'], ['두 사람이 세팅 코드를 하나씩 잡고, 쉴드루프를 본체 위로 넘겨 덮습니다. 바람이 약하게 불면, 먼저 거는 쪽을 바람이 불어오는 쪽으로 하면 바람이 루프를 반대쪽으로 넘겨 줍니다(모던캠핑).', 'roofthrow'], ['반대쪽 C·A·센터프레임 상부 후크 테이프 접속부에 접속 후크를 모두 겁니다.', 'roofhook'], ['다 걸었으면 세팅 코드를 분리합니다.', 'roofcord']],
   chk: ['한쪽 후크 연결', '반대쪽 후크 연결', '세팅 코드 분리'],
   warn: '바람이 강한 날에는 쉴드루프를 설치하지 말고 걷어 두세요(모던캠핑). 돛처럼 바람을 받아 본체와 프레임에 무리가 갑니다.', src: '설명서 p.9–10' },
 
@@ -1855,6 +1875,27 @@ const SOURCES = [
  ['https://prod.danawa.com/info/?pcode=8010352', '오징어 데크팩 8개 (다나와)', '3.5 × 7 cm, 11 g, 8개입 상품 예시']
 ];
 const MANUAL_PAGES = [[3, 'p.2 구성품'], [4, 'p.3 릿지폴·A 조인트'], [5, 'p.4 A·C·센터'], [6, 'p.5 후크·팩·로프'], [7, 'p.6 빌딩테이프·이너'], [8, 'p.7 이너 연결'], [9, 'p.8 세이프티 링'], [10, 'p.9 쉴드루프 위치'], [11, 'p.10 쉴드루프 순서'], [12, 'p.11 철수'], [13, 'p.12 접어서 수납'], [16, '제품 사양']];
+
+/* 현장 사진: 우리의캠핑 「초보자도 쉽게 따라할 수 있는 랜드락 설치방법」 영상 캡처 (사용자 제공 이미지) */
+const PHOTOS = {
+  0: [[4, '릿지폴에 A프레임을 ㅅ자로 올리는 구조 (빨강 A, 파랑 릿지 · 색은 영상 표시)']],
+  2: [[2, '스킨을 바닥에 넓게 펼치기'], [6, '폴대는 4종류: C×2, A×2, A프레임 릿지폴×1, 센터×1']],
+  3: [[10, '본체 정중앙 슬리브의 파란색 표시 = 릿지폴 자리'], [14, '위에서 본 모습: 릿지(파랑)와 A프레임(빨강)'], [21, 'A 조인트 올바른 방법(왼쪽)과 잘못된 방법(오른쪽)'], [23, '양쪽 한 마디를 빼서 꽂으면 결합이 쉽다']],
+  4: [[26, 'A프레임 발 = 제일 바깥쪽 링핀(빨간 원)'], [29, '한 사람이 가운데를 들어 원단 무게를 받쳐 준다'], [32, '릿지폴 + A프레임만으로 자립한 모습']],
+  5: [[34, '위에서 본 C프레임(초록): 발은 안쪽, 가운데는 끝 쪽으로'], [35, 'C프레임이 A프레임 바깥쪽!'], [36, 'X자로 관통하는 부분에도 꽂는 곳이 있다']],
+  6: [[39, '센터프레임(보라)은 폭 방향으로 가운데를 가로지른다'], [40, '센터 슬리브 입구의 빨간색 표시'], [45, '힘으로 밀지 말고 자연스럽게 반대쪽으로 넣기']],
+  7: [[48, '모든 클립을 폴대에 결합'], [49, 'X자 교차부 벨크로는 가볍게'], [53, '클립과 교차부를 모두 결합한 모습']],
+  8: [[55, '모서리 4곳부터 팩다운해 모양 잡기']],
+  9: [[51, '로프가 텐션을 잡아야 바람에 덜 흔들린다'], [52, '바람 부는 날에는 팩과 로프를 반드시 함께']],
+  11: [[63, '로고가 이쪽(거실 쪽)을 향하게'], [65, '빨간색 양 끝을 찾아 펼치기'], [70, '뒤 끝 고무줄은 바깥에 박아 둔 팩에'], [72, '중간의 파란 후크는 파란(A프레임) 링에'], [74, '마지막 빨간 끝은 센터프레임을 꽂았던 링에'], [79, '텐션은 웨빙으로 조절'], [80, '이너룸 설치 완료']],
+  12: [[58, '쉴드루프는 오목한 끝부분부터 찾기'], [60, '양 끝 모서리를 건 뒤 2명이 반대쪽으로 넘기기'], [61, '넘긴 뒤 각 후크에 텐션을 주어 고정']]
+};
+const POLES = [
+  { k: 'ridge', name: 'A프레임 릿지폴', n: 1, col: 'var(--navy)', tag: '곤색', where: '본체 정중앙 슬리브(파란 표시) · 길이 방향', look: '곧은 폴, 양 끝이 A 조인트에 꽂힘' },
+  { k: 'a', name: 'A프레임', n: 2, col: 'var(--navy)', tag: '곤색', where: '양 끝, 맨 바깥쪽 링핀(곤색 끈) · 폭 방향', look: '꼭대기에 꺾인 조인트(구멍)가 달린 폴' },
+  { k: 'c', name: 'C프레임', n: 2, col: 'var(--pblack)', tag: '검정', where: '검정 슬리브 · A 바깥쪽으로 X자 교차', look: '거의 일자, 완만하게 휘는 긴 폴' },
+  { k: 'center', name: '센터프레임', n: 1, col: 'var(--pred)', tag: '빨강', where: '가운데 빨간 슬리브 · 폭 방향', look: '관에는 색이 없고 양 끝에 빨간 표시' }
+];
 
 /* Close-up animatics: each draws one connection at loop time t (0..1) into a 200×130 SVG. */
 const DETAIL = (() => {
@@ -1926,7 +1967,7 @@ class LandLockStage {
   constructor(canvas, labelLayer) {
     this.canvas = canvas; this.labelLayer = labelLayer; this.numLayer = document.createElement('div'); this.numLayer.className = 'labels nums'; labelLayer.parentElement.insertBefore(this.numLayer, labelLayer);
     this.mode = 'ground'; this.deck = { w: 7, d: 6 };
-    this.stage = 0; this.opts = { numbers: false, xray: false, ropes: true, inner: true, roof: true, colors: false };
+    this.stage = 0; this.opts = { numbers: false, xray: false, colors: true, ropes: true, inner: true, roof: true };
     this.H = 1; this.Ht = 1; this.roofDrop = 0; this.roofDropT = 0; this.labels = [];
     this.need = true; this.tween = null;
 
@@ -2026,7 +2067,7 @@ class LandLockStage {
       const seam = (fn, width, col) => { g.strokeStyle = col; g.lineWidth = width; g.beginPath(); for (let k = 0; k <= 60; k++) { const v = k / 60, [x] = fn(v); const u = (x + LL.HALF_L) / LL.L; k ? g.lineTo(u2x(u), v2y(v)) : g.moveTo(u2x(u), v2y(v)); } g.stroke(); };
       for (const side of [-1, 1]) { seam(v => LL.frame('a', side, v), 5, 'rgba(150,140,115,.55)'); seam(v => LL.frame('c', side, v), 22, 'rgba(205,197,175,.9)'); seam(v => LL.frame('c', side, v), 2, 'rgba(140,130,105,.6)'); }
       seam(v => LL.frame('center', 1, v), 26, 'rgba(205,197,175,.9)');
-      g.fillStyle = 'rgba(205,197,175,.9)'; g.fillRect(u2x(0.14), v2y(0.5) - 10, u2x(0.72), 20); // ridge sleeve
+      g.fillStyle = 'rgba(205,197,175,.9)'; g.fillRect(u2x((LL.HALF_L - 2.0) / LL.L), v2y(0.5) - 10, u2x(4.0 / LL.L), 20); // ridge sleeve
       // side windows (both long sides) and side-door zips on the living half
       const win = (u0, u1, v0, v1) => {
         const x = u2x(u0), y = v2y(v0), ww = u2x(u1 - u0), hh = v2y(v1 - v0);
@@ -2072,9 +2113,9 @@ class LandLockStage {
         const ring = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.016, 8, 20), this.mat(PC[k], { emissive: PC[k], emissiveIntensity: 0.3 })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.03; g.add(ring);
         g.userData.ring = ring; T.add(g); return g; });
     }
-    mkPole('ridge', 'ridge', Array.from({ length: 9 }, (_, i) => [-2.25 + 4.5 * i / 8, 2.075, 0]), 16);
+    mkPole('ridge', 'ridge', Array.from({ length: 9 }, (_, i) => [-2.0 + 4.0 * i / 8, 2.075, 0]), 16);
     this.joints = new THREE.Group();
-    for (const x of [-2.25, 2.25]) { const j = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.15, 12), this.mat(0x2c4a86, { metalness: .4 })); j.rotation.x = Math.PI / 2; j.position.set(x, 2.075, 0); this.joints.add(j); }
+    for (const x of [-2.0, 2.0]) { const j = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.15, 12), this.mat(0x2c4a86, { metalness: .4 })); j.rotation.x = Math.PI / 2; j.position.set(x, 2.075, 0); this.joints.add(j); }
     T.add(this.joints);
 
     // hooks (revealed top → bottom) + velcro at A/C crossings
@@ -2087,7 +2128,7 @@ class LandLockStage {
     this.tapes = new THREE.Group(); const tm = this.mat(0x34363a);
     const strap = (a, b) => { const d = Math.hypot(b[0] - a[0], b[1] - a[1]); const m = new THREE.Mesh(new THREE.BoxGeometry(d, 0.012, 0.05), tm); m.position.set((a[0] + b[0]) / 2, 0.03, (a[1] + b[1]) / 2); m.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); this.tapes.add(m); };
     strap([0, -1.95], [0, 1.95]);
-    for (const s of [-1, 1]) { strap([s * 1.3, -1.95], [s * 2.35, 0]); strap([s * 1.3, 1.95], [s * 2.35, 0]); strap([s * 2.35, 0], [s * 3.05, 0]); }
+    for (const s of [-1, 1]) { strap([s * 2.3, -1.95], [s * 1.75, 0]); strap([s * 2.3, 1.95], [s * 1.75, 0]); strap([s * 1.75, 0], [s * 3.05, 0]); }
     T.add(this.tapes);
 
     // ground sheet (bedroom half)
@@ -2112,7 +2153,7 @@ class LandLockStage {
     this.mats = [0.62, 1.32, 2.02].map(x => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.06, 1.95), this.mat(0x4f6b5a, { roughness: .9 })); m.position.set(x, 0.05, 0); m.castShadow = true; IN.add(m); return m; });
     // attachment markers that pulse while that connection is being made
     const mk = (pts, col) => pts.map(([x, z]) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10), this.mat(col, { emissive: col, emissiveIntensity: .8, transparent: true, opacity: .9 })); m.position.set(x, 0.08, z); IN.add(m); return m; });
-    this.innerMarks = [mk([[2.72, -1.45], [2.72, 1.45]], 0xe0742a), mk([[1.25, -1.82], [1.25, 1.82]], 0x2c4a86), mk([[0.18, -1.7], [0.18, 1.7]], 0xc3372b), mk(Array.from({ length: 6 }, (_, i) => [0.5 + (i % 3) * 0.95, i < 3 ? -1.3 : 1.3]).map(([x, z]) => [x, z]), 0xffffff)];
+    this.innerMarks = [mk([[2.72, -1.45], [2.72, 1.45]], 0xe0742a), mk([[2.3, -1.72], [2.3, 1.72]], 0x2c4a86), mk([[0.18, -1.7], [0.18, 1.7]], 0xc3372b), mk(Array.from({ length: 6 }, (_, i) => [0.5 + (i % 3) * 0.95, i < 3 ? -1.3 : 1.3]).map(([x, z]) => [x, z]), 0xffffff)];
     this.innerMarks[3].forEach(m => { m.position.y = 1.55; m.scale.setScalar(0.6); });
     this.scene.add(IN);
 
@@ -2233,18 +2274,18 @@ class LandLockStage {
   setLabels() {
     const s = this.stage, deck = this.mode === 'deck';
     const L = {
-      0: [['릿지폴 · 곤색', [-1.2, 2.2, 0]], ['침실(이너룸) 쪽', [2.2, 1.2, -1.2]], ['거실 · 사이드 도어', [-1.3, 0.9, 2.05]]],
+      0: [['A프레임 릿지폴', [-0.8, 2.2, 0]], ['A프레임 (양 끝)', LL.frame('a', -1, 0.78)], ['C프레임 (X자 바깥)', LL.frame('c', 1, 0.8)], ['센터프레임', LL.frame('center', 1, 0.82)], ['침실(이너룸) 쪽', [2.2, 0.9, -1.4]]],
       1: deck ? [['본체 625 × 405 cm', [0, 0.05, 0]], ['로프 여유 공간', [2.6, 0.05, -4.0]], ['데크 크기 확인', [-this.deck.w / 2 + 0.3, 0.05, this.deck.d / 2]]] : [['본체 625 × 405 cm', [0, 0.05, 0]], ['로프 여유 공간', [2.6, 0.05, -4.0]]],
       2: [['I자 빌딩테이프', [0, 0.1, 0.9]], ['Y자 빌딩테이프', [2.3, 0.1, 0.5]], ['도어패널 방향', [-3.0, 0.1, 0]]],
-      3: [['곤색 씰은 바깥쪽', [2.25, 0.5, 0]], ['릿지폴 → 곤색 슬리브', [0, 0.45, 0]]],
-      4: [['곤색 링핀', [1.25, 0.1, 2.06]], ['반대쪽 조인트 주의', [-2.25, 1.8, 0]]],
-      5: [['C는 A의 바깥쪽', [-1.93, 1.75, 1.6]], ['검정 링핀', [-2.85, 0.1, 2.06]]],
+      3: [['곤색 씰 · ㅅ자가 아래로', [2.0, 0.5, 0]], ['릿지폴 → 곤색 슬리브', [0, 0.45, 0]]],
+      4: [['A프레임 발 · 맨 바깥쪽', [2.3, 0.1, 2.06]], ['반대쪽 조인트 주의', [-2.0, 1.8, 0]]],
+      5: [['C는 A의 바깥쪽 (X자)', LL.crossings[1]], ['C프레임 발 · 안쪽', [-1.2, 0.1, 2.06]]],
       6: [['빨강 슬리브', [0, 2.15, 0.6]], ['빨강 링핀', [0, 0.1, 2.06]]],
-      7: [['교차부 벨크로 + O링', [-1.93, 1.73, 1.51]], ['후크: 위 → 아래', [-2.2, 1.95, 0.3]]],
-      8: deck ? [['① A프레임 발부터 X자로', [-1.25, 0.05, -1.9]], ['오징어팩 · 판 아래 가로 걸림', [1.25, 0.05, 1.9]]] : [['① A프레임 발부터 X자로', [-1.25, 0.05, -1.9]], ['실내쪽으로 팩다운', [1.25, 0.05, 1.9]]],
+      7: [['교차부 벨크로 + O링', LL.crossings[1]], ['후크: 위 → 아래', [-2.2, 1.95, 0.3]]],
+      8: deck ? [['① A프레임 발부터 X자로', [-2.3, 0.05, -1.9]], ['오징어팩 · 판 아래 가로 걸림', [1.2, 0.05, 1.9]]] : [['① A프레임 발부터 X자로', [-2.3, 0.05, -1.9]], ['실내쪽으로 팩다운', [1.2, 0.05, 1.9]]],
       9: [['3.5m × 6', [1.9, 0.6, 3.0]], ['2.5m × 4', [3.6, 0.6, 1.7]], ['1.5m × 2', [-3.6, 0.3, 0]]],
       10: [['그라운드시트', [1.45, 0.05, 1.2]], ['가장자리는 안쪽으로', [2.7, 0.05, -1.6]]],
-      11: [['뒤쪽 모서리 → 팩', [2.72, 0.1, 1.45]], ['곤색 → A프레임 O링', [1.25, 0.1, -1.82]], ['빨강 → 센터 O링', [0.18, 0.1, 1.7]]],
+      11: [['뒤쪽 모서리 → 팩', [2.72, 0.1, 1.45]], ['파랑 → A프레임 O링', [2.3, 0.1, -1.72]], ['빨강 → 센터 O링', [0.18, 0.1, 1.7]]],
       12: [['쉴드루프', [0, 2.35, 0.8]], ['상부 후크 테이프에 연결', [1.5, 2.05, 1.2]]],
       13: [['로프 · 팩 최종 확인', [2.0, 0.6, 3.2]], ['환기 · 메쉬창', [-1.0, 1.4, -2.05]]]
     }[s] || [];
@@ -2371,7 +2412,8 @@ function renderSheet() {
     <div class="player"><button id="pPlay" class="pbtn"></button><span id="pInfo" class="pinfo"></span><button id="pRe" class="pbtn ghost">↺ 처음부터</button></div>
     <ol class="acts">${acts.map((a, k) => `<li data-act="${k}" class="${a.d ? 'deckline' : ''}"><span class="at">${a.t}${a.k ? '<em>확대컷</em>' : ''}</span><i class="bar"><b></b></i></li>`).join('')}</ol>
     ${i === 8 || i === 9 || i === 11 ? `<button class="pegmap-btn" data-tab="pegs">팩 지도 보기 · 번호별 위치와 필요한 팩 수 →</button>` : ''}
-    ${s.fig && FIGS[s.fig] ? FIGS[s.fig]() : ''}
+    ${(PHOTOS[i] || []).length ? `<div class="photos"><div class="ph-head"><b>현장 사진</b><span>누르면 크게 · 우리의캠핑 영상 캡처</span></div><div class="ph-row">${PHOTOS[i].map(([n, c], k) => `<button class="ph" data-photo="${i}:${k}"><img src="photos/p${pad(n)}.jpg" alt="${c}" loading="lazy"><span>${c}</span></button>`).join('')}</div></div>` : ''}
+    ${s.fig && FIGS[s.fig] ? FIGS[s.fig]() : ''}${s.fig2 && FIGS[s.fig2] ? FIGS[s.fig2]() : ''}
     ${s.tip ? `<p class="tip"><b>TIP</b>${s.tip}</p>` : ''}
     <div class="checks"><span>CHECK</span>${stepChecks(i).map((c, j) => `<label class="ck"><input type="checkbox" data-ck="${ckKey(i, j)}" ${st.checks[ckKey(i, j)] ? 'checked' : ''}><span>${c}</span></label>`).join('')}</div>
     <div class="warn"><span aria-hidden="true">!</span><span>${warn}</span></div>
@@ -2384,7 +2426,15 @@ function renderSheet() {
 }
 
 /* ---------- explainer figures ---------- */
+const poleSvg = k => ({
+  ridge: '<path d="M14 30H186" stroke="#b9bfc6" stroke-width="7" stroke-linecap="round"/><rect x="6" y="24" width="14" height="12" rx="3" fill="var(--navy)"/><rect x="180" y="24" width="14" height="12" rx="3" fill="var(--navy)"/>',
+  a: '<path d="M14 50 L70 50 Q92 50 100 20 Q108 50 130 50 L186 50" stroke="#b9bfc6" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="100" cy="20" r="9" fill="#7c828a"/><circle cx="100" cy="20" r="3.5" fill="var(--paper)"/><rect x="8" y="44" width="10" height="12" rx="2" fill="var(--navy)"/><rect x="182" y="44" width="10" height="12" rx="2" fill="var(--navy)"/>',
+  c: '<path d="M10 52 Q100 14 190 52" stroke="#b9bfc6" stroke-width="7" fill="none" stroke-linecap="round"/><rect x="4" y="46" width="10" height="12" rx="2" fill="var(--pblack)"/><rect x="186" y="46" width="10" height="12" rx="2" fill="var(--pblack)"/>',
+  center: '<path d="M10 52 Q100 6 190 52" stroke="#b9bfc6" stroke-width="7" fill="none" stroke-linecap="round"/><rect x="4" y="46" width="10" height="12" rx="2" fill="var(--pred)"/><rect x="186" y="46" width="10" height="12" rx="2" fill="var(--pred)"/>'
+})[k];
+const poleCards = () => `<div class="poles">${POLES.map(p => `<div class="pole" style="--pc:${p.col}"><svg viewBox="0 0 200 64" aria-hidden="true">${poleSvg(p.k)}</svg><div><b>${p.name} <em>× ${p.n}</em></b><span class="pt">${p.tag} 표시</span><small>${p.look}</small><small>${p.where}</small></div></div>`).join('')}</div>`;
 const FIGS = {
+  poles: () => `<figure class="fig"><figcaption><b>폴대 4종류 구분하기</b>끝의 색 표시 = 슬리브 색 = 링핀 끈 색. 모양으로도 구분됩니다. A는 꼭대기에 꺾인 조인트가 있고, C는 거의 일자입니다.</figcaption>${poleCards()}</figure>`,
   tape: () => `<figure class="fig"><figcaption><b>빌딩테이프가 뭔가요?</b>본체 바닥 안쪽을 가로지르는 띠(웨빙) 3개입니다. 프레임을 세울 때 본체 폭이 벌어지거나 좁아지지 않게 잡아 주는 <em>줄자</em> 역할을 합니다. 프레임 발(링핀)이 힘을 받는 자리에 연결돼 있어 끝이 Y자로 갈라져 있습니다. 길이 조절은 되지 않고 버클로 끊었다 연결합니다(홍캠프 리뷰, 설명서 p.6).</figcaption>
   <svg viewBox="0 0 360 200" role="img" aria-label="위에서 본 빌딩테이프 배치: 양 끝 Y자형 2개, 가운데 I자형 1개">
     <path d="M52 28h256l34 36v72l-34 36H52l-34-36V64z" fill="var(--sunk)" stroke="var(--muted)" stroke-width="1.5"/>
@@ -2492,7 +2542,7 @@ function planSVG(num, vert = innerWidth < 700) {
   const fr = (k, sd, col, w) => { const pts = []; for (let i = 0; i <= 30; i++) { const p = LL.frame(k, sd, i / 30); pts.push(P(p[0], p[2])); } return `<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="${w}"/>`; };
   for (const sd of [-1, 1]) { s += fr('c', sd, 'var(--pblack)', 2.4); s += fr('a', sd, 'var(--navy)', 2.4); }
   s += fr('center', 1, 'var(--pred)', 2.6);
-  s += `<path d="M${P(-2.25, 0)}L${P(2.25, 0)}" stroke="var(--navy)" stroke-width="2.6"/>`;
+  s += `<path d="M${P(-2.0, 0)}L${P(2.0, 0)}" stroke="var(--navy)" stroke-width="2.6"/>`;
   // ropes and pegs
   for (const p of L.pts) if (p.kind === 'rope') s += `<path d="M${P(p.at[0], p.at[2])}L${P(p.x, p.z)}" stroke="var(--accent)" stroke-width="1" stroke-opacity=".75"/>`;
   for (const p of L.pts) {
@@ -2588,7 +2638,7 @@ function renderSide() {
   const fr = (k, sd, col) => { const pts = []; for (let i = 0; i <= 20; i++) { const p = LL.frame(k, sd, i / 40); pts.push(`${X(p[0])},${Y(p[1])}`); } return `<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="3"/>`; };
   for (const sd of [-1, 1]) { s += fr('c', sd, 'var(--pblack)'); s += fr('a', sd, 'var(--navy)'); }
   s += fr('center', 1, 'var(--pred)');
-  s += `<path d="M${X(-2.25)} ${Y(2.075)}H${X(2.25)}" stroke="var(--navy)" stroke-width="3"/>`;
+  s += `<path d="M${X(-2.0)} ${Y(2.075)}H${X(2.0)}" stroke="var(--navy)" stroke-width="3"/>`;
   for (const p of LL.crossings.filter(c => c[2] > 0)) s += `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="5" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
   s += `<path d="M${X(LL.HALF_L) + 22} ${gy}V${Y(2.05)}" stroke="var(--muted)"/><text class="svg-mono" x="${X(LL.HALF_L) + 28}" y="${Y(1.0)}">205</text>`;
   s += `<path d="M${X(-LL.HALF_L)} ${gy + 22}H${X(LL.HALF_L)}" stroke="var(--muted)"/><text class="svg-mono" x="${cx}" y="${gy + 40}" text-anchor="middle">625</text>`;
@@ -2626,9 +2676,11 @@ $('#gallery').innerHTML = MANUAL_PAGES.map(([n, t]) => `<button data-page="${n}"
 $('#vids').innerHTML = VIDEOS.map(v => `<a class="card vid" href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener"><span class="tag">${v.tag}</span><h3>${v.title}</h3><p>${v.by} · ${v.note}</p><span class="go">YouTube에서 보기 ↗</span></a>`).join('');
 $('#srcs').innerHTML = SOURCES.map(([u, t, n]) => `<li><a href="${u}" target="_blank" rel="noopener">${t} ↗</a><small>${n}</small></li>`).join('');
 
+let photoCtx = null;
+function openPhoto(si, k) { const L = PHOTOS[si]; k = (k + L.length) % L.length; photoCtx = [si, k]; mpage = null; const [n, c] = L[k]; $('#dImg').src = `photos/p${pad(n)}.jpg`; $('#dImg').alt = c; $('#dCap').textContent = `${k + 1}/${L.length} · ${c}`; const d = $('#dlg'); if (!d.open) { try { d.showModal(); } catch (e) { d.setAttribute('open', ''); } } }
 let mpage = 4;
-function openManual(n) { mpage = Math.max(1, Math.min(16, n)); $('#dImg').src = `assets/manual-${pad(mpage)}.png`; $('#dCap').textContent = mpage === 1 ? '표지' : mpage === 16 ? '제품 사양' : `설명서 p.${mpage - 1}`; const d = $('#dlg'); if (!d.open) { try { d.showModal(); } catch (e) { d.setAttribute('open', ''); } } $('.dbody').scrollTop = 0; }
-$('#dPrev').onclick = () => openManual(mpage - 1); $('#dNext').onclick = () => openManual(mpage + 1); $('#dClose').onclick = () => $('#dlg').close();
+function openManual(n) { photoCtx = null; mpage = Math.max(1, Math.min(16, n)); $('#dImg').src = `assets/manual-${pad(mpage)}.png`; $('#dCap').textContent = mpage === 1 ? '표지' : mpage === 16 ? '제품 사양' : `설명서 p.${mpage - 1}`; const d = $('#dlg'); if (!d.open) { try { d.showModal(); } catch (e) { d.setAttribute('open', ''); } } $('.dbody').scrollTop = 0; }
+$('#dPrev').onclick = () => mpage ? openManual(mpage - 1) : openPhoto(photoCtx[0], photoCtx[1] - 1); $('#dNext').onclick = () => mpage ? openManual(mpage + 1) : openPhoto(photoCtx[0], photoCtx[1] + 1); $('#dClose').onclick = () => $('#dlg').close();
 $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg').close(); });
 
 /* ---------- tabs ---------- */
@@ -2642,6 +2694,7 @@ document.addEventListener('click', e => {
   const s = e.target.closest('[data-step]'); if (s) return go(+s.dataset.step);
   const g = e.target.closest('[data-go]'); if (g) return go(st.step + +g.dataset.go, true);
   const m = e.target.closest('[data-mode]'); if (m) { setMode(m.dataset.mode); return toast(m.dataset.mode === 'deck' ? '나무데크 · 오징어팩 기준으로 바꿨어요.' : '흙·잔디 · 일반 팩 기준으로 바꿨어요.'); }
+  const ph = e.target.closest('[data-photo]'); if (ph) { const [si, k] = ph.dataset.photo.split(':').map(Number); return openPhoto(si, k); }
   const pg = e.target.closest('[data-page]'); if (pg) return openManual(+pg.dataset.page);
   const v = e.target.closest('[data-view]'); if (v && stage) return stage.view(v.dataset.view);
 });
@@ -2658,6 +2711,7 @@ $('#tDetail').onclick = () => setDetail(!st.detail);
 layerBtn('#tNums', 'numbers'); layerBtn('#tXray', 'xray'); layerBtn('#tColors', 'colors'); layerBtn('#tRopes', 'ropes'); layerBtn('#tInner', 'inner'); layerBtn('#tRoof', 'roof');
 document.addEventListener('keydown', e => { if ($('#guide').hidden || e.target.matches('input') || $('#dlg').open) return; if (e.key === 'ArrowRight' && e.altKey === false && document.activeElement !== $('#cv')) go(st.step + 1); if (e.key === 'ArrowLeft' && document.activeElement !== $('#cv')) go(st.step - 1); });
 
+$('#poleCards').innerHTML = poleCards();
 renderSide(); setMode(st.mode); go(0); $('#tDetail').setAttribute('aria-pressed', st.detail); if (stage) stage.setShift(st.detail);
 let wasVert = innerWidth < 700; addEventListener('resize', () => { const v = innerWidth < 700; if (v !== wasVert) { wasVert = v; renderPlan(); renderPegTab(); } }); requestAnimationFrame(frame);
 const h = location.hash.slice(1); if (TABS.includes(h) && h !== 'guide') tab(h);
