@@ -83,6 +83,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .stage canvas{display:block;width:100%;height:100%}
 .labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .tag3d{position:absolute;left:0;top:0;transform-origin:0 0;white-space:nowrap;font-size:12.5px;font-weight:600;padding:4px 9px 4px 8px;border-radius:4px;background:color-mix(in srgb,var(--paper) 92%,transparent);color:var(--ink);border-left:3px solid var(--accent);margin:-14px 0 0 6px;transition:opacity .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.tag3d.dyn{background:#ff7a1a;color:#fff;border-left-color:#c24e00;z-index:2}
+.tag3d.dyn::before{background:#ffd23f}
 .tag3d::before{content:"";position:absolute;left:-9px;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
 .stage-top{position:absolute;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
 .stage-top>*{pointer-events:auto}
@@ -2100,20 +2102,25 @@ class LandLockStage {
     const pm = () => this.mat(0xc9cdd2, { metalness: 0.85, roughness: 0.32, emissive: 0x000000 });
     const dark = this.mat(0x2a2a28);
     const mkPole = (key, kind, pts, seg) => {
-      const mesh = this.tube(pts, 0.021, this.poleMats[kind], seg); const g = new THREE.Group(); g.add(mesh);
+      const mesh = this.tube(pts, 0.027, this.poleMats[kind], seg); const g = new THREE.Group(); g.add(mesh);
       const ends = [pts[0], pts[pts.length - 1]].map(p => { const b = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 8), this.mat(PC[kind])); b.position.set(...p); g.add(b); return b; });
-      this.poles[key] = { g, mesh, total: mesh.geometry.index.count, ends, kind }; T.add(g);
+      const v = pts.map(p => new THREE.Vector3(...p)); let len = 0; const cum = [0]; for (let i = 1; i < v.length; i++) { len += v[i].distanceTo(v[i - 1]); cum.push(len); }
+      // insertion helpers: the part still outside the sleeve, a glowing tip, and a push arrow
+      const feeder = new THREE.Mesh(new THREE.CylinderGeometry(0.029, 0.029, 1, 10), this.poleMats[kind]); feeder.visible = false; g.add(feeder);
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 10), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.95 })); tip.visible = false; g.add(tip);
+      const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.26, 14), new THREE.MeshBasicMaterial({ color: 0xff7a1a })); arrow.visible = false; g.add(arrow);
+      this.poles[key] = { g, mesh, total: mesh.geometry.index.count, ends, kind, v, cum, len, feeder, tip, arrow }; T.add(g);
     };
     for (const k of ['a', 'c', 'center', 'ridge']) this.poleMats[k] = pm();
     for (const k of ['a', 'c', 'center']) for (const s of (k === 'center' ? [1] : [-1, 1])) {
-      const pts = Array.from({ length: 41 }, (_, i) => LL.frame(k, s, i / 40));
+      const pts = Array.from({ length: 41 }, (_, i) => LL.frame(k, s, 1 - i / 40)); // start at the near (+z) foot so the push is visible
       mkPole(k + s, k, pts, 64);
       this.pins[k + s] = [0, 1].map(t => { const p = LL.frame(k, s, t); const g = new THREE.Group(); g.position.set(p[0], 0, p[2]);
         const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.05, 10), dark); foot.position.y = 0.025; g.add(foot);
         const ring = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.016, 8, 20), this.mat(PC[k], { emissive: PC[k], emissiveIntensity: 0.3 })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.03; g.add(ring);
         g.userData.ring = ring; T.add(g); return g; });
     }
-    mkPole('ridge', 'ridge', Array.from({ length: 9 }, (_, i) => [-2.0 + 4.0 * i / 8, 2.075, 0]), 16);
+    mkPole('ridge', 'ridge', Array.from({ length: 9 }, (_, i) => [2.0 - 4.0 * i / 8, 2.075, 0]), 16);
     this.joints = new THREE.Group();
     for (const x of [-2.0, 2.0]) { const j = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.15, 12), this.mat(0x2c4a86, { metalness: .4 })); j.rotation.x = Math.PI / 2; j.position.set(x, 2.075, 0); this.joints.add(j); }
     T.add(this.joints);
@@ -2211,7 +2218,7 @@ class LandLockStage {
   setStage(i, cam = true) {
     this.stage = i;
     const V = [
-      [[8.6, 5.0, 9.4], [0, 0.9, 0]], [[0.01, 13.5, 6.5], [0, 0, 0]], [[6.5, 6.5, 7.5], [0, 0, 0]], [[-6.5, 4.6, 7.2], [-0.5, 1.0, 0]],
+      [[8.6, 5.0, 9.4], [0, 0.9, 0]], [[0.01, 13.5, 6.5], [0, 0, 0]], [[6.5, 6.5, 7.5], [0, 0, 0]], [[4.2, 6.8, 7.4], [0, 0.1, 0]],
       [[7.2, 3.8, 8.0], [0.8, 1.0, 0]], [[-8.2, 3.6, 6.2], [-1.4, 1.0, 0.6]], [[2.8, 3.4, 9.2], [0, 1.1, 0]], [[-5.6, 3.0, 6.4], [-1.9, 1.3, 1.4]],
       [[4.6, 7.0, 7.4], [0, 0, 0.3]], [[9.5, 7.2, 9.5], [0, 0.4, 0]], [[4.9, 6.0, 4.4], [1.45, 0.1, 0]], [[4.9, 6.4, 4.6], [1.45, 0.4, 0]], [[5.8, 8.0, 8.2], [0, 1.6, 0]], [[8.6, 5.0, 9.4], [0, 0.9, 0]]
     ][i];
@@ -2234,7 +2241,37 @@ class LandLockStage {
     const spread = step === 2 ? ez(s(0)) : 1; this.shellMesh.scale.set(0.55 + 0.45 * spread, 1, 0.3 + 0.7 * spread);
     // frames grow through their sleeves
     const grow = { ridge: at(3, s(0)), 'a-1': at(3, s(2)), a1: at(3, s(4)), 'c-1': at(5, s(0)), c1: at(5, cl((f - 3) * 1.6)), center1: at(6, s(1)) };
-    for (const k in this.poles) { const P = this.poles[k], g = grow[k]; P.g.visible = g > 0.001; const segs = P.total / 6; P.mesh.geometry.setDrawRange(0, Math.ceil(segs * ez(g)) * 6); P.ends[0].visible = g > 0.02; P.ends[1].visible = g > 0.98; }
+    const up = new THREE.Vector3(0, 1, 0), tmp = new THREE.Vector3(), dir = new THREE.Vector3();
+    const pz = 0.5 + 0.5 * Math.sin(performance.now() / 140);
+    this.insertTag = null;
+    for (const k in this.poles) {
+      const P = this.poles[k], g = grow[k], e = ez(g), active = !full && g > 0.001 && g < 0.999;
+      P.g.visible = g > 0.001; P.feeder.visible = P.tip.visible = P.arrow.visible = false; P.g.position.set(0, 0, 0);
+      if (P.kind === 'a') {
+        // A frames are carried in from outside and slid onto the ridge-pole joint
+        P.mesh.geometry.setDrawRange(0, P.total); P.ends[0].visible = P.ends[1].visible = g > 0.001;
+        const side = Math.sign(P.v[0].x) || 1; P.g.position.x = side * (1 - e) * 1.6; P.g.position.y = (1 - e) * 0.25;
+        if (active) {
+          const apex = P.v[Math.floor(P.v.length / 2)];
+          P.arrow.visible = true; P.arrow.position.set(apex.x + side * 0.35, apex.y, 0); P.arrow.quaternion.setFromUnitVectors(up, tmp.set(-side, 0, 0)); P.arrow.scale.setScalar(0.8 + 0.4 * pz);
+          P.tip.visible = g > 0.75; P.tip.position.copy(apex); P.tip.scale.setScalar(0.9 + 0.6 * pz);
+          this.insertTag = { p: apex.clone().add(P.g.position), t: g < 0.75 ? 'A프레임 → 릿지 조인트에 끼우기' : '딸깍! 끝까지' };
+        }
+        continue;
+      }
+      const segs = P.total / 6; P.mesh.geometry.setDrawRange(0, Math.ceil(segs * e) * 6); P.ends[0].visible = g > 0.02; P.ends[1].visible = g > 0.98;
+      if (!active) continue;
+      // tip position along the sleeve
+      const d = e * P.len; let i = 1; while (i < P.cum.length - 1 && P.cum[i] < d) i++;
+      const a = P.v[i - 1], b = P.v[i], f2 = (d - P.cum[i - 1]) / Math.max(1e-6, P.cum[i] - P.cum[i - 1]);
+      P.tip.visible = true; P.tip.position.lerpVectors(a, b, Math.min(1, Math.max(0, f2))); P.tip.scale.setScalar(0.8 + 0.5 * pz);
+      // the rest of the pole still outside, sticking out of the sleeve mouth
+      if (P.kind === 'ridge') dir.subVectors(P.v[0], P.v[1]).normalize(); else dir.set((Math.sign(P.v[0].x) || 0.6) * 0.7, 0.35, Math.sign(P.v[0].z) || 1).normalize();
+      const out = Math.min(1.1, (1 - e) * P.len);
+      if (out > 0.05) { P.feeder.visible = true; P.feeder.scale.set(1, out, 1); P.feeder.position.copy(P.v[0]).addScaledVector(dir, out / 2); P.feeder.quaternion.setFromUnitVectors(up, dir); }
+      P.arrow.visible = true; P.arrow.position.copy(P.v[0]).addScaledVector(dir, out + 0.25 + 0.08 * pz); P.arrow.quaternion.setFromUnitVectors(up, tmp.copy(dir).negate());
+      this.insertTag = { p: P.v[0].clone().addScaledVector(dir, out * 0.6), t: { ridge: '릿지폴 → 곤색 슬리브로 밀어 넣기', c: 'C프레임 → 검정 슬리브로 밀어 넣기', center: '센터프레임 → 빨강 슬리브로 밀어 넣기' }[P.kind] };
+    }
     this.joints.visible = grow['a-1'] > 0.9 || grow.a1 > 0.9;
     const pin = { 'a-1': at(4, s(2)), a1: at(4, s(2)), 'c-1': at(5, s(2)), c1: at(5, cl((f - 3.6) / 0.4)), center1: at(6, s(2)) };
     for (const k in this.pins) { const g = grow[k] > 0.98; this.pins[k].forEach(p => { p.visible = g; const e = pin[k]; p.userData.ring.visible = e > 0.01; p.userData.ring.scale.setScalar(1 + 0.5 * Math.sin(e * Math.PI)); p.userData.ring.position.y = 0.03 + (1 - e) * 0.25; }); }
@@ -2263,11 +2300,11 @@ class LandLockStage {
     const rh = at(12, s(1)), rt = at(12, s(2)); this.roofPivot.visible = o.roof && rh > 0.01;
     const sw = 1 - ez(rt); this.roofPivot.rotation.x = sw * 1.25; this.roofPivot.position.set(0, sw * 0.45 + (1 - ez(rh)) * 0.8, sw * 0.2);
     this.siteGroup.visible = step <= 2;
-    const xr = o.xray || step === 8 || step === 10 || step === 11;
+    const xr = o.xray || step === 3 || step === 8 || step === 10 || step === 11;
     this.fabricMat.transparent = xr; this.fabricMat.opacity = xr ? 0.26 : 1; this.fabricMat.depthWrite = !xr; this.fabricMat.needsUpdate = true;
     this.roofMat.transparent = xr; this.roofMat.opacity = xr ? 0.3 : 1; this.roofMat.depthWrite = !xr;
     const focus = { 3: ['ridge', 'a'], 4: ['a'], 5: ['c'], 6: ['center'] }[step] || [];
-    for (const k in this.poleMats) { const on = o.colors || focus.includes(k); const m = this.poleMats[k]; m.color.set(on ? this.PC[k] : 0xc9cdd2); m.metalness = on ? 0.3 : 0.85; m.emissive.set(focus.includes(k) ? this.PC[k] : 0x000000); m.emissiveIntensity = focus.includes(k) ? 0.35 : 0; }
+    for (const k in this.poleMats) { const on = o.colors || focus.includes(k); const m = this.poleMats[k]; m.color.set(on ? this.PC[k] : 0xc9cdd2); m.metalness = on ? 0.3 : 0.85; m.emissive.set(focus.includes(k) ? (k === 'center' ? 0xff5a3c : k === 'c' ? 0x555a60 : 0x4f86ff) : 0x000000); m.emissiveIntensity = focus.includes(k) ? 0.9 : 0; }
     this.need = true;
   }
 
@@ -2289,7 +2326,7 @@ class LandLockStage {
       12: [['쉴드루프', [0, 2.35, 0.8]], ['상부 후크 테이프에 연결', [1.5, 2.05, 1.2]]],
       13: [['로프 · 팩 최종 확인', [2.0, 0.6, 3.2]], ['환기 · 메쉬창', [-1.0, 1.4, -2.05]]]
     }[s] || [];
-    this.labelLayer.innerHTML = ''; this.labels = L.map(([t, p]) => { const e = document.createElement('span'); e.className = 'tag3d'; e.textContent = t; this.labelLayer.append(e); return { e, p: new THREE.Vector3(...p), floor: p[1] <= 0.2 }; });
+    this.labelLayer.innerHTML = ''; if (this.dynTag) this.labelLayer.append(this.dynTag); this.labels = L.map(([t, p]) => { const e = document.createElement('span'); e.className = 'tag3d'; e.textContent = t; this.labelLayer.append(e); return { e, p: new THREE.Vector3(...p), floor: p[1] <= 0.2 }; });
     this.need = true;
   }
 
@@ -2304,6 +2341,8 @@ class LandLockStage {
     const p = this.canvas.parentElement, w = p.clientWidth, h = p.clientHeight, v = new THREE.Vector3();
     const showNums = this.opts.numbers || this.stage === 8 || this.stage === 9;
     for (const t of this.numTags || []) { const it = t.it; const vis = showNums && it.g.visible && (it.p.kind !== 'rope' || this.opts.ropes) && (this.opts.numbers || (this.stage === 8 ? it.p.kind === 'body' : it.p.kind === 'rope')); if (!vis) { t.e.style.opacity = 0; continue; } const a = this.pegPos(it.p); t.v.set(a.x, a.y + 0.12, a.z).project(this.camera); const x = (t.v.x + 1) / 2 * w, y = (1 - t.v.y) / 2 * h; t.e.style.transform = `translate(${x}px, ${y}px)`; t.e.style.opacity = (t.v.z > 1 || x < 6 || x > w - 6 || y < 6 || y > h - 6) ? 0 : 1; }
+    if (!this.dynTag) { this.dynTag = document.createElement('span'); this.dynTag.className = 'tag3d dyn'; this.labelLayer.append(this.dynTag); }
+    if (this.insertTag && this.tent.visible) { const q = this.tent.localToWorld(this.insertTag.p.clone()).project(this.camera); const x = (q.x + 1) / 2 * w, y = (1 - q.y) / 2 * h; if (this.dynTag.textContent !== this.insertTag.t) this.dynTag.textContent = this.insertTag.t; this.dynTag.style.transform = `translate(${Math.min(Math.max(x, 8), w - this.dynTag.offsetWidth - 16)}px, ${Math.min(Math.max(y, 20), h - 60)}px)`; this.dynTag.style.opacity = (q.z > 1 || x < 0 || x > w || y < 0 || y > h) ? 0 : 1; } else this.dynTag.style.opacity = 0;
     for (const l of this.labels) { v.copy(l.p); if (this.tent.visible && !l.floor) v.y *= this.tent.scale.y; v.project(this.camera); const x = (v.x + 1) / 2 * w, y = (1 - v.y) / 2 * h; const off = v.z > 1 || x < 10 || x > w - 10 || y < 10 || y > h - 10; l.e.style.transform = `translate(${x}px, ${y}px)`; l.e.style.opacity = off ? 0 : 1; }
   }
   /* ---------- deck / pegs / ropes (rebuilt when mode changes) ---------- */
